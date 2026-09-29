@@ -189,7 +189,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void }) {
                 target="_blank"
                 rel="noopener"
               >
-                <SiGithub className="mr-2 h-4 w-4" /> Get Help ↗
+                <SiGithub className="icon-base mr-2" /> Get Help ↗
               </a>
             </Button>
             <Button variant="outline" asChild>
@@ -219,7 +219,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void }) {
       {supportType !== "custom" && (
         <div>
           <div className="flex items-center gap-2 text-base font-bold">
-            <SiGithub className="h-4 w-4" /> Community & Resources
+            <SiGithub className="icon-base" /> Community & Resources
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
             Join the conversation and connect with the Langfuse community.
@@ -231,7 +231,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void }) {
                 target="_blank"
                 rel="noopener"
               >
-                <SiGithub className="mr-2 h-4 w-4" /> GitHub ↗
+                <SiGithub className="icon-base mr-2" /> GitHub ↗
               </a>
             </Button>
             <Button asChild variant="ghost" className="justify-start px-1.5">
@@ -241,7 +241,7 @@ export function IntroSection({ onStartForm }: { onStartForm: () => void }) {
                 rel="noopener"
                 className="flex items-center"
               >
-                <SiDiscord className="mr-2 h-4 w-4" /> Discord ↗
+                <SiDiscord className="icon-base mr-2" /> Discord ↗
               </a>
             </Button>
             <Button asChild variant="ghost" className="justify-start px-1.5">

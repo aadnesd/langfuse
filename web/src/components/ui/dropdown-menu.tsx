@@ -4,13 +4,7 @@
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { cva } from "class-variance-authority";
-import {
-  Check,
-  ChevronRight,
-  Circle,
-  Minus,
-  type LucideIcon,
-} from "lucide-react";
+import { Check, ChevronRight, Minus, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 
 import { cn } from "@/src/utils/tailwind";
@@ -553,7 +547,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Circle className="fill-current" />
+        <span className="size-2 rounded-full bg-current" aria-hidden />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}

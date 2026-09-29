@@ -638,7 +638,7 @@ const VersionLabel = ({ state }: { state: SidebarVersionState }) => {
             href="https://github.com/langfuse/langfuse/releases"
             target="_blank"
           >
-            <SiGithub size={16} className="mr-2" />
+            <SiGithub className="icon-base mr-2" />
             Releases
           </Link>
         </DropdownMenuItem>

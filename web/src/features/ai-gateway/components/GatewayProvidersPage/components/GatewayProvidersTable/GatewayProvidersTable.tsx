@@ -213,9 +213,9 @@ function ModelCount({
 function ProviderName({ provider }: { provider: GatewayProvider }) {
   const icon =
     provider === "OPENAI" ? (
-      <SiOpenai className="size-4" aria-hidden="true" />
+      <SiOpenai className="icon-base" aria-hidden="true" />
     ) : provider === "ANTHROPIC" ? (
-      <SiAnthropic className="size-4" aria-hidden="true" />
+      <SiAnthropic className="icon-base" aria-hidden="true" />
     ) : (
       <Route className="icon-base" aria-hidden="true" />
     );

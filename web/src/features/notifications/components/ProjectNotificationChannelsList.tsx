@@ -52,7 +52,7 @@ export function ProjectNotificationChannelsList({
             >
               <div className="flex min-w-0 items-center gap-2">
                 {channel.action.type === "SLACK" ? (
-                  <SiSlack className="h-4 w-4 shrink-0" />
+                  <SiSlack className="icon-base shrink-0" />
                 ) : (
                   <Webhook className="icon-base shrink-0" />
                 )}
