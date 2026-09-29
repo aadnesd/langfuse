@@ -12,7 +12,12 @@ import {
 } from "../rule-helpers/tailwind.js";
 
 // The icon scale: icon-sm 12px, icon-base 14px, icon-lg 20px, icon-xl 28px.
-const RAW_ICON_SIZE_CLASS = /^(?:h|w|size)-(?:\d+(?:\.\d+)?|px|\[.*\])$/;
+// Illustrations at 40px and above keep raw sizes.
+const ILLUSTRATION_MIN_PX = 40;
+const TAILWIND_SPACING_PX = 4;
+const ROOT_FONT_SIZE_PX = 16;
+const RAW_ICON_SIZE_CLASS = /^(?:h|w|size)-(\d+(?:\.\d+)?|px|\[.*\])$/;
+const ARBITRARY_LENGTH = /^\[(\d+(?:\.\d+)?)(px|rem)\]$/;
 const RETIRED_ICON_SIZE_CLASSES = new Set(["icon-md"]);
 const SVG_SELECTOR_VARIANT = /\[&[^\]]*svg/;
 // Class-string holders that exist to size an icon.
@@ -23,10 +28,24 @@ const ICON_CLASS_PROP_NAME = /iconclass(?:name)?$/i;
 type Options = [{ exceptions?: string[] }];
 type MessageIds = "unexpected" | "strokeWidth" | "svgSelector";
 
+function rawSizeToPx(size: string): number | null {
+  if (size === "px") return 1;
+  if (!size.startsWith("[")) return Number(size) * TAILWIND_SPACING_PX;
+  const match = ARBITRARY_LENGTH.exec(size);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return match[2] === "rem" ? value * ROOT_FONT_SIZE_PX : value;
+}
+
+function isIllustrationSize(px: number | null): boolean {
+  return px !== null && px >= ILLUSTRATION_MIN_PX;
+}
+
 function utilityIsForbiddenSize(utility: string): boolean {
-  return (
-    RAW_ICON_SIZE_CLASS.test(utility) || RETIRED_ICON_SIZE_CLASSES.has(utility)
-  );
+  if (RETIRED_ICON_SIZE_CLASSES.has(utility)) return true;
+  const match = RAW_ICON_SIZE_CLASS.exec(utility);
+  if (!match) return false;
+  return !isIllustrationSize(rawSizeToPx(match[1]));
 }
 
 function classNameValueHasForbiddenSize(value: string): boolean {
@@ -104,7 +123,7 @@ const rule = createRule<Options, MessageIds>({
     type: "problem",
     docs: {
       description:
-        "Disallow raw Tailwind size utilities, numeric `size` props and `strokeWidth` on lucide-react icons; sizes come from the icon scale (icon-sm/icon-base/icon-lg/icon-xl).",
+        "Disallow raw Tailwind size utilities, numeric `size` props and `strokeWidth` on lucide-react icons; sizes come from the icon scale (icon-sm/icon-base/icon-lg/icon-xl). Illustrations at 40px and above keep raw sizes.",
     },
     schema: [
       {
@@ -268,7 +287,9 @@ const rule = createRule<Options, MessageIds>({
 
     function hasForbiddenSizeProp(attribute: TSESTree.JSXAttribute): boolean {
       const expression = attributeExpression(attribute);
-      return expression !== null && getNumericLiteralValue(expression) !== null;
+      if (expression === null) return false;
+      const px = getNumericLiteralValue(expression);
+      return px !== null && !isIllustrationSize(px);
     }
 
     return {

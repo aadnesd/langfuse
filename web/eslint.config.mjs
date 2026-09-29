@@ -437,21 +437,12 @@ export default [
     files: ["src/**/*.{ts,tsx}"],
     rules: {
       "@repo/no-raw-font-weight": "error",
-      // Illustration icons at 40px and above keep raw sizes; decision deferred.
+      // Raw sizes of 40px and above are illustrations; the rule allows them by size.
       // Spinner sizes follow their container, not the icon scale.
       "@repo/no-raw-icon-size": [
         "error",
         {
-          exceptions: [
-            "src/components/design-system/Spinner/Spinner.tsx",
-            "src/components/error-page.tsx",
-            "src/features/batch-actions/components/AddObservationsToDatasetDialog/StatusStep.tsx",
-            "src/features/chart-view/components/ChartCanvas.tsx",
-            "src/features/chart-view/components/ChartViewPanel.tsx",
-            "src/features/scores-chart-view/components/ScoreChartViewPanel/ScoreChartViewPanel.tsx",
-            "src/features/scores/ScoresAnalyticsPage.tsx",
-            "src/features/widgets/chart-library/Chart.tsx",
-          ],
+          exceptions: ["src/components/design-system/Spinner/Spinner.tsx"],
         },
       ],
       "@repo/no-arbitrary-colors": "error",

@@ -27,6 +27,22 @@ ruleTester.run("no-raw-icon-size", rule, {
     // Non-numeric dimension utilities are not icon sizes.
     `import { Info } from "lucide-react";
      const x = <Info className="size-full h-auto" />;`,
+    // Illustrations at 40px and above keep raw sizes.
+    `import { Info } from "lucide-react";
+     const x = <Info className="size-10" />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info className="h-10 w-10" />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info className="h-16 w-16 text-muted-foreground" />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info className="size-[40px]" />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info className="size-[2.5rem]" />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info size={40} />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info size="64" />;`,
+    `const x = <div className="[&_svg]:size-10" />;`,
     // Non-lucide element with the same raw classes is not reported.
     `import { Info } from "lucide-react";
      const x = <div className="h-4 w-4" />;`,
@@ -157,6 +173,48 @@ ruleTester.run("no-raw-icon-size", rule, {
     {
       code: `import { Info } from "lucide-react";
              const x = <Info className="icon-md" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    // Sizes below 40px are not illustrations.
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info className="h-9 w-9" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info className="size-9" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info className="h-px" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info className="size-[39px]" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info className="size-[2rem]" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    // Arbitrary values that are not a px or rem length are not on the scale.
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info className="size-[var(--x)]" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info size={36} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const x = <Info size={39} />;`,
       errors: [{ messageId: "unexpected" }],
     },
     // Raw size on one branch of a conditional or a logical expression.
