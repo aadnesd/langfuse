@@ -438,10 +438,12 @@ export default [
     rules: {
       "@repo/no-raw-font-weight": "error",
       // Illustration icons at 40px and above keep raw sizes; decision deferred.
+      // Spinner sizes follow their container, not the icon scale.
       "@repo/no-raw-icon-size": [
         "error",
         {
           exceptions: [
+            "src/components/design-system/Spinner/Spinner.tsx",
             "src/components/error-page.tsx",
             "src/features/batch-actions/components/AddObservationsToDatasetDialog/StatusStep.tsx",
             "src/features/chart-view/components/ChartCanvas.tsx",
