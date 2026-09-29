@@ -47,8 +47,8 @@ export function Icons() {
           title="Icons"
           lede={
             <>
-              Four sizes, one default colour, lucide default stroke. Sizes
-              are utilities in{" "}
+              Four sizes, one default colour, lucide default stroke. Sizes are
+              utilities in{" "}
               <code className="font-mono">src/styles/globals.css</code>.
             </>
           }
@@ -81,9 +81,9 @@ export function Icons() {
             illustrations; icons inside buttons and menu rows are icon-base.
             icon-xl covers 28 to 36px illustrations. Icons at 40px and above
             (chart and analytics empty states, the crash page) keep their raw
-            sizes: illustration sizes, decision deferred. Primitives
-            (Button, menu items, Badge, sidebar rows) set the size on their
-            svg children; call sites inside them do not size icons.
+            sizes: illustration sizes, decision deferred. Primitives (Button,
+            menu items, Badge, sidebar rows) set the size on their svg children;
+            call sites inside them do not size icons.
           </p>
         </PageSection>
 
@@ -98,14 +98,14 @@ export function Icons() {
               caption="Icon one step lighter than its label."
             >
               <span className="text-foreground flex items-center gap-1.5 text-sm">
-                <Search className="icon-base text-icon-foreground" aria-hidden />
+                <Search
+                  className="icon-base text-icon-foreground"
+                  aria-hidden
+                />
                 Search traces
               </span>
             </Example>
-            <Example
-              verdict="Don't"
-              caption="Icon darker than its label."
-            >
+            <Example verdict="Don't" caption="Icon darker than its label.">
               <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
                 <Search className="icon-base text-foreground" aria-hidden />
                 Search traces
