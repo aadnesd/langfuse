@@ -254,7 +254,7 @@ function ResultRow({ result }: { result: DecisionModelQuestionResult }) {
     <li className="flex flex-col gap-2 rounded-md border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2 text-sm">
-          <copy.icon className="h-4 w-4 shrink-0" aria-label={copy.label} />
+          <copy.icon className="icon-base shrink-0" aria-label={copy.label} />
           <Badge variant="secondary" className="font-mono">
             {result.scoreName}
           </Badge>

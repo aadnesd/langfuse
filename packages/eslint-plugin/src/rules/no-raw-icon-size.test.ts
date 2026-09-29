@@ -75,6 +75,51 @@ ruleTester.run("no-raw-icon-size", rule, {
      const x = <Info className=<span /> />;`,
     `import { Info } from "lucide-react";
      const x = <Info size=<span /> />;`,
+    // Indirect sizing that stays on the scale.
+    `import { Info } from "lucide-react";
+     const cls = "icon-base shrink-0";
+     const x = <Info className={cls} />;`,
+    `import { Info } from "lucide-react";
+     const iconVariants = cva("icon-base", { variants: { tone: { a: "text-red" } } });
+     const x = <Info className={cn(iconVariants({ tone: "a" }))} />;`,
+    `const iconClassName = "icon-sm text-muted-foreground";`,
+    `const x = <Foo iconClassName="icon-base" />;`,
+    `const presentation = { iconClassName: "text-dark-yellow" };`,
+    // Container sizes on button variants are not icon sizes.
+    `const buttonVariants = cva("", { variants: { size: { icon: "h-8 w-8 [&_svg]:icon-base" } } });`,
+    `const x = <button className="h-8 w-8 [&_svg:not([class*='icon-'])]:icon-base" />;`,
+    `const x = <div className="[&_svg]:shrink-0 [&>svg]:size-full" />;`,
+    // A variable initialised elsewhere (function, parameter) is left alone.
+    `import { Info } from "lucide-react";
+     function Icon({ cls }) { return <Info className={cls} />; }`,
+    `import { Info } from "lucide-react";
+     const cls = pick();
+     const x = <Info className={cls} />;`,
+    // Destructured icon class props are reads, not declarations.
+    `const { iconClassName } = getPresentation();`,
+    `let iconClass;`,
+    // cva arrays, spreads, holes and non-string values are walked or skipped.
+    `import { Info } from "lucide-react";
+     const iconVariants = cva([, ...rest, "icon-base"], { variants: { tone: { a: ["text-red"] } }, defaultVariants: defaults });
+     const x = <Info className={iconVariants()} />;`,
+    // Non-class values and computed or numeric keys are not class holders.
+    `const presentation = { iconClassName: theme.icon, [key]: "h-4 w-4", 1: "h-4 w-4" };`,
+    // Calls that do not resolve to cva are left alone.
+    `import { Info } from "lucide-react";
+     const make = () => "icon-base";
+     const x = <Info className={make()} />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info className={clsx("h-4 w-4")} />;`,
+    "const x = <div className={`[&_svg]:icon-base ${y}`} />;",
+    // Cyclic consts and member-call or spread class expressions are left alone.
+    `import { Info } from "lucide-react";
+     const a = cn(b, "shrink-0");
+     const b = cn(...rest, a);
+     const x = <Info className={a} />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info className={styles.icon()} />;`,
+    `import { Info } from "lucide-react";
+     const x = <Info className={props.cls} />;`,
   ],
   invalid: [
     {
@@ -167,6 +212,92 @@ ruleTester.run("no-raw-icon-size", rule, {
       code: `import { Info } from "lucide-react";
              const x = <Info {...rest} xml:lang="en" className="h-4 w-4" />;`,
       errors: [{ messageId: "unexpected" }],
+    },
+    // Raw size reaches the icon through a const.
+    {
+      code: `import { Info } from "lucide-react";
+             const cls = "h-3.5 w-3.5 flex-none";
+             const x = <Info className={cls} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const cls = cn("shrink-0", small ? "h-3 w-3" : "icon-base");
+             const x = <Info className={cls} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    // Raw size in a cva base or variant used on the icon.
+    {
+      code: `import { Info } from "lucide-react";
+             const variants = cva("h-4 w-4", { variants: { tone: { a: "text-red" } } });
+             const x = <Info className={cn("shrink-0", variants({ tone: "a" }))} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const variants = cva("shrink-0", { variants: { size: { sm: "size-3", md: "icon-base" } } });
+             const x = <Info className={variants({ size: "sm" })} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    // Icon-named holders are reported once, at the declaration.
+    {
+      code: `import { Info } from "lucide-react";
+             const iconClass = cn("shrink-0", small ? "h-3 w-3" : "h-4 w-4");
+             const x = <Info className={iconClass} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const iconVariants = cva("h-4 w-4", { variants: {} });
+             const x = <Info className={iconVariants()} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `import { Info } from "lucide-react";
+             const variants = cva(["h-4", "w-4"]);
+             const x = <Info className={variants()} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `const presentation = { "iconClassName": "h-4 w-4" };`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `const iconClassName = "h-4 w-4";`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `const presentation = { iconClassName: "h-4 w-4 text-red" };`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `const x = <Foo iconClassName="h-4 w-4" />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    {
+      code: `const x = <Foo leftIconClassName={cn("h-4", open && "w-4")} />;`,
+      errors: [{ messageId: "unexpected" }],
+    },
+    // Raw sizes behind an svg selector variant, in any file.
+    {
+      code: `const x = <button className="h-8 [&_svg]:size-4" />;`,
+      errors: [{ messageId: "svgSelector" }],
+    },
+    {
+      code: `const x = <span className="[&>svg]:h-3.5 [&>svg]:w-3.5" />;`,
+      errors: [{ messageId: "svgSelector" }],
+    },
+    {
+      code: `const buttonVariants = cva("", { variants: { size: { sm: "h-7 [&_svg:not([class*='icon-'])]:size-4" } } });`,
+      errors: [{ messageId: "svgSelector" }],
+    },
+    {
+      code: "const x = <div className={`flex [&_svg]:h-4 ${y}`} />;",
+      errors: [{ messageId: "svgSelector" }],
+    },
+    {
+      code: `const x = <div className="[&_svg]:icon-md" />;`,
+      errors: [{ messageId: "svgSelector" }],
     },
   ],
 });

@@ -1,84 +1,55 @@
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import {
+  AST_NODE_TYPES,
+  ASTUtils,
+  type TSESTree,
+} from "@typescript-eslint/utils";
 
 import { createRule } from "../util.js";
-import { extractTailwindUtilityTokens } from "../rule-helpers/tailwind.js";
+import {
+  extractTailwindUtilityTokens,
+  normalizeTailwindToken,
+  stripTailwindVariants,
+} from "../rule-helpers/tailwind.js";
 
-// lucide-react icons size only through the icon scale (icon-sm 12px,
-// icon-base 14px, icon-lg 20px, icon-xl 28px). Raw Tailwind height/width/size utilities and
-// numeric `size` props escape it. Stroke width is the lucide default
-// everywhere, so `strokeWidth` is banned as well.
+// The icon scale: icon-sm 12px, icon-base 14px, icon-lg 20px, icon-xl 28px.
 const RAW_ICON_SIZE_CLASS = /^(?:h|w|size)-(?:\d+(?:\.\d+)?|px|\[.*\])$/;
 const RETIRED_ICON_SIZE_CLASSES = new Set(["icon-md"]);
+const SVG_SELECTOR_VARIANT = /\[&[^\]]*svg/;
+// Class-string holders that exist to size an icon.
+const ICON_CLASS_HOLDER_NAME =
+  /^icon(?:class(?:name)?|cls|variants?|styles?)?$|iconclass(?:name)?$/i;
+const ICON_CLASS_PROP_NAME = /iconclass(?:name)?$/i;
 
 type Options = [{ exceptions?: string[] }];
-type MessageIds = "unexpected" | "strokeWidth";
+type MessageIds = "unexpected" | "strokeWidth" | "svgSelector";
+
+function utilityIsForbiddenSize(utility: string): boolean {
+  return (
+    RAW_ICON_SIZE_CLASS.test(utility) || RETIRED_ICON_SIZE_CLASSES.has(utility)
+  );
+}
 
 function classNameValueHasForbiddenSize(value: string): boolean {
   for (const utility of extractTailwindUtilityTokens(value)) {
-    if (RAW_ICON_SIZE_CLASS.test(utility)) return true;
-    if (RETIRED_ICON_SIZE_CLASSES.has(utility)) return true;
+    if (utilityIsForbiddenSize(utility)) return true;
   }
   return false;
 }
 
-function classNameExpressionHasForbiddenSize(
-  node: TSESTree.Expression,
-): boolean {
-  if (node.type === AST_NODE_TYPES.Literal) {
-    return (
-      typeof node.value === "string" &&
-      classNameValueHasForbiddenSize(node.value)
-    );
+function svgSelectorValueHasForbiddenSize(value: string): boolean {
+  if (!value.includes("svg")) return false;
+  for (const match of value.matchAll(/\S+/g)) {
+    const token = match[0];
+    const utility = normalizeTailwindToken(stripTailwindVariants(token));
+    const variants = token.slice(0, token.length - utility.length);
+    if (
+      SVG_SELECTOR_VARIANT.test(variants) &&
+      utilityIsForbiddenSize(utility)
+    ) {
+      return true;
+    }
   }
-
-  if (node.type === AST_NODE_TYPES.TemplateLiteral) {
-    return node.quasis.some((quasi) =>
-      classNameValueHasForbiddenSize(quasi.value.raw),
-    );
-  }
-
-  if (node.type === AST_NODE_TYPES.ConditionalExpression) {
-    return (
-      classNameExpressionHasForbiddenSize(node.consequent) ||
-      classNameExpressionHasForbiddenSize(node.alternate)
-    );
-  }
-
-  if (node.type === AST_NODE_TYPES.LogicalExpression) {
-    return classNameExpressionHasForbiddenSize(node.right);
-  }
-
-  if (
-    node.type === AST_NODE_TYPES.CallExpression &&
-    node.callee.type === AST_NODE_TYPES.Identifier &&
-    node.callee.name === "cn"
-  ) {
-    return node.arguments.some(
-      (argument) =>
-        argument.type !== AST_NODE_TYPES.SpreadElement &&
-        classNameExpressionHasForbiddenSize(argument),
-    );
-  }
-
   return false;
-}
-
-function hasForbiddenClassName(attribute: TSESTree.JSXAttribute): boolean {
-  const value = attribute.value;
-  if (!value) return false;
-
-  if (value.type === AST_NODE_TYPES.Literal) {
-    return (
-      typeof value.value === "string" &&
-      classNameValueHasForbiddenSize(value.value)
-    );
-  }
-
-  if (value.type !== AST_NODE_TYPES.JSXExpressionContainer) return false;
-  const expression = value.expression;
-  if (expression.type === AST_NODE_TYPES.JSXEmptyExpression) return false;
-
-  return classNameExpressionHasForbiddenSize(expression);
 }
 
 function getNumericLiteralValue(node: TSESTree.Expression): number | null {
@@ -91,22 +62,40 @@ function getNumericLiteralValue(node: TSESTree.Expression): number | null {
   return null;
 }
 
-function hasForbiddenSizeProp(attribute: TSESTree.JSXAttribute): boolean {
+function attributeExpression(
+  attribute: TSESTree.JSXAttribute,
+): TSESTree.Expression | null {
   const value = attribute.value;
-  if (!value) return false;
+  if (!value) return null;
+  if (value.type === AST_NODE_TYPES.Literal) return value;
+  if (value.type !== AST_NODE_TYPES.JSXExpressionContainer) return null;
+  if (value.expression.type === AST_NODE_TYPES.JSXEmptyExpression) return null;
+  return value.expression;
+}
 
-  let expression: TSESTree.Expression | null = null;
-  if (value.type === AST_NODE_TYPES.Literal) {
-    expression = value;
-  } else if (value.type === AST_NODE_TYPES.JSXExpressionContainer) {
-    if (value.expression.type === AST_NODE_TYPES.JSXEmptyExpression) {
-      return false;
-    }
-    expression = value.expression;
+const CLASS_EXPRESSION_TYPES = new Set<AST_NODE_TYPES>([
+  AST_NODE_TYPES.Literal,
+  AST_NODE_TYPES.TemplateLiteral,
+  AST_NODE_TYPES.ConditionalExpression,
+  AST_NODE_TYPES.LogicalExpression,
+  AST_NODE_TYPES.CallExpression,
+  AST_NODE_TYPES.Identifier,
+]);
+
+function isClassExpression(node: TSESTree.Node): node is TSESTree.Expression {
+  return CLASS_EXPRESSION_TYPES.has(node.type);
+}
+
+function propertyKeyName(property: TSESTree.Property): string | null {
+  if (property.computed) return null;
+  if (property.key.type === AST_NODE_TYPES.Identifier) return property.key.name;
+  if (
+    property.key.type === AST_NODE_TYPES.Literal &&
+    typeof property.key.value === "string"
+  ) {
+    return property.key.value;
   }
-  if (!expression) return false;
-
-  return getNumericLiteralValue(expression) !== null;
+  return null;
 }
 
 const rule = createRule<Options, MessageIds>({
@@ -136,6 +125,8 @@ const rule = createRule<Options, MessageIds>({
         "Use the icon size scale: icon-sm (12px), icon-base (14px), icon-lg (20px) or icon-xl (28px) instead of raw sizes.",
       strokeWidth:
         "Do not set strokeWidth on lucide icons; every icon uses the lucide default.",
+      svgSelector:
+        "Size nested icons with [&_svg]:icon-sm / [&_svg]:icon-base / [&_svg]:icon-lg, not raw sizes.",
     },
   },
   defaultOptions: [{}],
@@ -145,7 +136,140 @@ const rule = createRule<Options, MessageIds>({
       return {};
     }
 
+    const sourceCode = context.sourceCode;
     const lucideLocalNames = new Set<string>();
+    // Reported at the declaration; a later use on an icon is the same finding.
+    const reportedInits = new Set<TSESTree.Node>();
+
+    function resolveConstInit(
+      identifier: TSESTree.Identifier,
+    ): TSESTree.Expression | null {
+      const variable = ASTUtils.findVariable(
+        sourceCode.getScope(identifier),
+        identifier,
+      );
+      const definition = variable?.defs[0]?.node;
+      if (
+        !definition ||
+        definition.type !== AST_NODE_TYPES.VariableDeclarator ||
+        !definition.init
+      ) {
+        return null;
+      }
+      return definition.init;
+    }
+
+    function cvaStringsHaveForbiddenSize(
+      node: TSESTree.Node,
+      visited: Set<TSESTree.Node>,
+    ): boolean {
+      if (node.type === AST_NODE_TYPES.ObjectExpression) {
+        return node.properties.some(
+          (property) =>
+            property.type === AST_NODE_TYPES.Property &&
+            cvaStringsHaveForbiddenSize(property.value, visited),
+        );
+      }
+      if (node.type === AST_NODE_TYPES.ArrayExpression) {
+        return node.elements.some(
+          (element) =>
+            element !== null &&
+            element.type !== AST_NODE_TYPES.SpreadElement &&
+            cvaStringsHaveForbiddenSize(element, visited),
+        );
+      }
+      if (
+        node.type === AST_NODE_TYPES.Literal ||
+        node.type === AST_NODE_TYPES.TemplateLiteral ||
+        node.type === AST_NODE_TYPES.ConditionalExpression ||
+        node.type === AST_NODE_TYPES.LogicalExpression ||
+        node.type === AST_NODE_TYPES.CallExpression
+      ) {
+        return expressionHasForbiddenSize(node, visited);
+      }
+      return false;
+    }
+
+    function expressionHasForbiddenSize(
+      node: TSESTree.Expression,
+      visited: Set<TSESTree.Node> = new Set(),
+    ): boolean {
+      if (visited.has(node)) return false;
+      visited.add(node);
+
+      if (node.type === AST_NODE_TYPES.Literal) {
+        return (
+          typeof node.value === "string" &&
+          classNameValueHasForbiddenSize(node.value)
+        );
+      }
+
+      if (node.type === AST_NODE_TYPES.TemplateLiteral) {
+        return node.quasis.some((quasi) =>
+          classNameValueHasForbiddenSize(quasi.value.raw),
+        );
+      }
+
+      if (node.type === AST_NODE_TYPES.ConditionalExpression) {
+        return (
+          expressionHasForbiddenSize(node.consequent, visited) ||
+          expressionHasForbiddenSize(node.alternate, visited)
+        );
+      }
+
+      if (node.type === AST_NODE_TYPES.LogicalExpression) {
+        return expressionHasForbiddenSize(node.right, visited);
+      }
+
+      if (node.type === AST_NODE_TYPES.Identifier) {
+        const init = resolveConstInit(node);
+        if (!init || reportedInits.has(init)) return false;
+        return expressionHasForbiddenSize(init, visited);
+      }
+
+      if (node.type === AST_NODE_TYPES.CallExpression) {
+        if (node.callee.type !== AST_NODE_TYPES.Identifier) return false;
+
+        if (node.callee.name === "cn") {
+          return node.arguments.some(
+            (argument) =>
+              argument.type !== AST_NODE_TYPES.SpreadElement &&
+              expressionHasForbiddenSize(argument, visited),
+          );
+        }
+
+        if (node.callee.name === "cva") {
+          return node.arguments.some(
+            (argument) =>
+              argument.type !== AST_NODE_TYPES.SpreadElement &&
+              cvaStringsHaveForbiddenSize(argument, visited),
+          );
+        }
+
+        // `iconVariants({ type })` where `iconVariants = cva(...)`.
+        const init = resolveConstInit(node.callee);
+        if (!init || reportedInits.has(init)) return false;
+        if (
+          init.type === AST_NODE_TYPES.CallExpression &&
+          init.callee.type === AST_NODE_TYPES.Identifier &&
+          init.callee.name === "cva"
+        ) {
+          return expressionHasForbiddenSize(init, visited);
+        }
+      }
+
+      return false;
+    }
+
+    function hasForbiddenClassName(attribute: TSESTree.JSXAttribute): boolean {
+      const expression = attributeExpression(attribute);
+      return expression !== null && expressionHasForbiddenSize(expression);
+    }
+
+    function hasForbiddenSizeProp(attribute: TSESTree.JSXAttribute): boolean {
+      const expression = attributeExpression(attribute);
+      return expression !== null && getNumericLiteralValue(expression) !== null;
+    }
 
     return {
       ImportDeclaration(node) {
@@ -156,32 +280,81 @@ const rule = createRule<Options, MessageIds>({
           lucideLocalNames.add(specifier.local.name);
         }
       },
+      Literal(node) {
+        if (
+          typeof node.value === "string" &&
+          svgSelectorValueHasForbiddenSize(node.value)
+        ) {
+          context.report({ node, messageId: "svgSelector" });
+        }
+      },
+      TemplateLiteral(node) {
+        if (
+          node.quasis.some((quasi) =>
+            svgSelectorValueHasForbiddenSize(quasi.value.raw),
+          )
+        ) {
+          context.report({ node, messageId: "svgSelector" });
+        }
+      },
+      VariableDeclarator(node) {
+        if (
+          node.id.type !== AST_NODE_TYPES.Identifier ||
+          !ICON_CLASS_HOLDER_NAME.test(node.id.name) ||
+          !node.init
+        ) {
+          return;
+        }
+        if (expressionHasForbiddenSize(node.init)) {
+          reportedInits.add(node.init);
+          context.report({ node, messageId: "unexpected" });
+        }
+      },
+      Property(node) {
+        if (node.parent.type === AST_NODE_TYPES.ObjectPattern) return;
+        const key = propertyKeyName(node);
+        if (!key || !ICON_CLASS_PROP_NAME.test(key)) return;
+        if (
+          isClassExpression(node.value) &&
+          expressionHasForbiddenSize(node.value)
+        ) {
+          context.report({ node, messageId: "unexpected" });
+        }
+      },
       JSXOpeningElement(node) {
         const name = node.name;
         if (name.type !== AST_NODE_TYPES.JSXIdentifier) return;
-        if (!lucideLocalNames.has(name.name)) return;
+        const isLucide = lucideLocalNames.has(name.name);
 
         for (const attribute of node.attributes) {
           if (attribute.type !== AST_NODE_TYPES.JSXAttribute) continue;
           if (attribute.name.type !== AST_NODE_TYPES.JSXIdentifier) continue;
+          const attributeName = attribute.name.name;
 
           if (
-            attribute.name.name === "className" &&
+            ICON_CLASS_PROP_NAME.test(attributeName) &&
             hasForbiddenClassName(attribute)
           ) {
             context.report({ node: attribute, messageId: "unexpected" });
             continue;
           }
 
+          if (!isLucide) continue;
+
           if (
-            attribute.name.name === "size" &&
-            hasForbiddenSizeProp(attribute)
+            attributeName === "className" &&
+            hasForbiddenClassName(attribute)
           ) {
             context.report({ node: attribute, messageId: "unexpected" });
             continue;
           }
 
-          if (attribute.name.name === "strokeWidth") {
+          if (attributeName === "size" && hasForbiddenSizeProp(attribute)) {
+            context.report({ node: attribute, messageId: "unexpected" });
+            continue;
+          }
+
+          if (attributeName === "strokeWidth") {
             context.report({ node: attribute, messageId: "strokeWidth" });
           }
         }

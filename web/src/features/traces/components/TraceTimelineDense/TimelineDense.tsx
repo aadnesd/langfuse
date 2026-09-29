@@ -1973,10 +1973,7 @@ function GutterContent({
           }}
         >
           <span className="shrink-0">
-            <ItemTypeIcon
-              type={node.type as LangfuseItemType}
-              className="size-4"
-            />
+            <ItemTypeIcon type={node.type as LangfuseItemType} />
           </span>
           <span
             className="text-foreground truncate"

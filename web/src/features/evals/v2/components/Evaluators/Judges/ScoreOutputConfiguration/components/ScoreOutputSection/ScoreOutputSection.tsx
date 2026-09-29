@@ -312,10 +312,13 @@ export function ScoreOutputSection({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span
-                            className="text-dark-yellow h-4 w-4 shrink-0"
+                            className="text-dark-yellow inline-flex shrink-0"
                             aria-label={`Warning: ${categoryWarnings[index]}`}
                           >
-                            <TriangleAlert aria-hidden="true" />
+                            <TriangleAlert
+                              className="icon-base"
+                              aria-hidden="true"
+                            />
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>

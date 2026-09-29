@@ -921,7 +921,7 @@ export function WidgetForm({
                               variant="ghost"
                               onClick={() => applyPreset(preset)}
                             >
-                              <preset.icon className="mr-2 h-4 w-4" />
+                              <preset.icon className="icon-base mr-2" />
                               {preset.label}
                             </Button>
                           </PopoverClose>

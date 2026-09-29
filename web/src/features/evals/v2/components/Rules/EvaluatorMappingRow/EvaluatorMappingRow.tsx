@@ -132,9 +132,9 @@ export const EvaluatorMappingRow = memo(function EvaluatorMappingRow({
                         <span
                           aria-label="Some variables are not mapped correctly"
                           title="Some variables are not mapped correctly"
-                          className="text-dark-yellow h-3.5 w-3.5"
+                          className="text-dark-yellow inline-flex shrink-0"
                         >
-                          <TriangleAlert aria-hidden />
+                          <TriangleAlert className="icon-base" aria-hidden />
                         </span>
                       ) : null}
                     </span>

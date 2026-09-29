@@ -124,11 +124,7 @@ const ObservationHeader = ({
     </span>
     <span className="-mr-1">•</span>
     <span className="inline-flex items-center gap-1">
-      <ItemBadge
-        type={observation.type ?? "EVENT"}
-        isSmall
-        className="h-3 w-3"
-      />
+      <ItemBadge type={observation.type ?? "EVENT"} isSmall />
       <span>
         {String(observation.type ?? "EVENT")
           .toLowerCase()

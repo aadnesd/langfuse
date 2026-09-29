@@ -140,7 +140,7 @@ export function VirtualizedTreeNodeWrapper({
               isSelected ? "bg-muted" : "bg-background group-hover:bg-accent",
             )}
           >
-            <ItemTypeIcon type={nodeType} className="icon-sm" />
+            <ItemTypeIcon type={nodeType} />
           </div>
           {/* Vertical bar downwards if there are expanded children (skipped
               when children render capped at this same indent — the spine
